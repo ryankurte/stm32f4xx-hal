@@ -42,7 +42,7 @@ use crate::stm32::I2C3;
 ))]
 use crate::stm32::{I2C1, I2C2, RCC};
 
-use embedded_hal::blocking::i2c::{Read, Write, WriteRead};
+use embedded_hal::blocking::i2c::{Read, Write, WriteRead, I2cError};
 
 #[cfg(any(
     feature = "stm32f401",
@@ -496,6 +496,15 @@ impl PinSda<I2C3> for PH8<AlternateOD<AF4>> {}
 pub enum Error {
     OVERRUN,
     NACK,
+}
+
+impl I2cError for Error {
+    fn is_nack(&self) -> bool {
+        match self {
+            Error::NACK => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(any(
