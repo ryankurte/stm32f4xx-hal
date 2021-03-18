@@ -2,7 +2,7 @@
 use core::convert::Infallible;
 
 use crate::{
-    hal::watchdog::{Watchdog, WatchdogEnable},
+    hal::watchdog::{Watchdog, Enable as WatchdogEnable},
     stm32::{DBGMCU, IWDG},
     time::MilliSeconds,
 };
@@ -91,13 +91,14 @@ impl IndependentWatchdog {
 impl WatchdogEnable for IndependentWatchdog {
     type Time = MilliSeconds;
     type Error = Infallible;
+    type Target = IndependentWatchdog;
 
-    fn try_start<T: Into<Self::Time>>(&mut self, period: T) -> Result<(), Self::Error> {
+    fn try_start<T: Into<Self::Time>>(self, period: T) -> Result<Self::Target, Self::Error> {
         self.setup(period.into().0);
 
         self.iwdg.kr.write(|w| unsafe { w.key().bits(KR_START) });
 
-        Ok(())
+        Ok(self)
     }
 }
 

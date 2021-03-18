@@ -236,6 +236,43 @@ macro_rules! hal {
                     self.tim.cr1.modify(|_, w| w.cen().clear_bit());
                     self.tim
                 }
+
+                pub fn enable(&mut self, enabled: bool) {
+                    match enabled {
+                        true => self.tim.cr1.modify(|_, w| w.cen().set_bit()),
+                        false => self.tim.cr1.modify(|_, w| w.cen().clear_bit()),
+                    }
+                }
+
+                pub fn reset(&mut self) {
+                    self.tim.cnt.reset();
+                }
+
+                pub fn set_freq<T: Into<Hertz>>(&mut self, frequency: T) {
+                    let frequency = frequency.into().0;
+
+                    // Fetch peripehral 
+                    let pclk_mul = if self.clocks.$ppre() == 1 { 1 } else { 2 };
+
+                    let ticks = self.clocks.$pclk().0 * pclk_mul / frequency;
+
+                    let psc = u16((ticks - 1) / (1 << 16)).unwrap();
+                    self.tim.psc.write(|w| w.psc().bits(psc) );
+
+                    let arr = u16(ticks / u32(psc + 1)).unwrap();
+                    self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
+                }
+
+                // Fetch peripheral clock post-multiplier
+                pub fn pclk(&self) -> Hertz {
+                    // Fetch peripheral clock multiplier
+                    let pclk_mul = if self.clocks.$ppre() == 1 { 1 } else { 2 };
+
+                    // Fetch peripheral clock freq * multiplier
+                    let pclk = self.clocks.$pclk().0 * pclk_mul;
+
+                    Hertz(pclk)
+                }
             }
 
             impl CountDown for Timer<$TIM> {
@@ -252,8 +289,7 @@ macro_rules! hal {
                     self.tim.cnt.reset();
 
                     let frequency = timeout.into().0;
-                    let pclk_mul = if self.clocks.$ppre() == 1 { 1 } else { 2 };
-                    let ticks = self.clocks.$pclk().0 * pclk_mul / frequency;
+                    let ticks = self.pclk().0 / frequency;
 
                     let psc = u16((ticks - 1) / (1 << 16)).unwrap();
                     self.tim.psc.write(|w| w.psc().bits(psc) );

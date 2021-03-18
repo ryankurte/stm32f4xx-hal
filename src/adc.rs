@@ -27,7 +27,9 @@ macro_rules! adc_pins {
         $(
             impl Channel<stm32::$adc> for $pin {
                 type ID = u8;
-                const CHANNEL: Self::ID = $chan;
+                fn channel(&self) -> Self::ID {
+                    $chan
+                }
             }
         )+
     };
@@ -861,7 +863,7 @@ macro_rules! adc {
                 /// * `sequence` - where in the sequence to sample the channel. Also called rank in some STM docs/code
                 /// * `sample_time` - how long to sample for. See datasheet and ref manual to work out how long you need\
                 /// to sample for at a given ADC clock frequency
-                pub fn configure_channel<CHANNEL>(&mut self, _channel: &CHANNEL, sequence: config::Sequence, sample_time: config::SampleTime)
+                pub fn configure_channel<CHANNEL>(&mut self, channel: &CHANNEL, sequence: config::Sequence, sample_time: config::SampleTime)
                 where
                     CHANNEL: Channel<stm32::$adc_type, ID=u8>
                 {
@@ -875,7 +877,7 @@ macro_rules! adc {
                         }
                     });
 
-                    let channel = CHANNEL::CHANNEL;
+                    let channel = channel.channel();
 
                     //Set the channel in the right sequence field
                     match sequence {
